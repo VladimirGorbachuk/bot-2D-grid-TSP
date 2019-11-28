@@ -128,7 +128,7 @@ class OptimizedBotClean(Matrix_Bot_Dirt):
 
     
     
-    def __init__(self, epochs = 100, iterations=50, population = 100, type="swap", **kwargs):
+    def __init__(self, epochs = 20, iterations=250, population = 100, type="swap", **kwargs):
         self.iterations = iterations
         self.sequences_distances = {}
         self.epochs = epochs
@@ -138,7 +138,8 @@ class OptimizedBotClean(Matrix_Bot_Dirt):
         super().__init__(**kwargs)
             
         generators = {"swap":self.swap_generator,
-                      "pair":self.pair_generator}
+                      "pair":self.pair_generator,
+                      "cross-breed": self.cross_breed_generator}
         
         self.sequence_generator = generators[type]
 
@@ -150,6 +151,7 @@ class OptimizedBotClean(Matrix_Bot_Dirt):
         for shuffled_initial_guess in range(int(self.iterations ** 0.5)):
             additional_guess = list(initial_guess)
             random.shuffle(additional_guess)
+            
             if not tuple(additional_guess) in self.checked_solutions_set:
                 self.sequences_distances[tuple(additional_guess)] = (1 /
                                              self.calculate_distance_for_seq(additional_guess)) ** 3
@@ -159,6 +161,7 @@ class OptimizedBotClean(Matrix_Bot_Dirt):
             estimated_solutions.sort()
             current_best_solutions = estimated_solutions[-50:]
             self.sequences_diestances = {k:v for v,k in current_best_solutions}
+            
             for iteration in range(self.iterations):
                 new_sequence = next(self.sequence_generator())
                 if not new_sequence in self.checked_solutions_set:
@@ -190,8 +193,7 @@ class OptimizedBotClean(Matrix_Bot_Dirt):
 
             for dirt_index in left_nodes:
                 new_sequence.append(dirt_index)
-            assert (len(new_sequence) == len(self.dirt_coords))
-
+            
             yield tuple(new_sequence)
             
     def swap_generator(self):
@@ -200,17 +202,50 @@ class OptimizedBotClean(Matrix_Bot_Dirt):
             [sequence] = random.choices(list(self.sequences_distances.keys()),
                                                     weights = list(self.sequences_distances.values()),
                                                     k = 1)
-            sequence = list(sequence)
+            new_sequence = list(sequence)
             swap_index_left = random.randint(0, len(sequence) - 2)
             swap_index_right = random.randint(swap_index_left+1,len(sequence)-1)
 
-            sequence[swap_index_left],sequence[swap_index_right]=sequence[swap_index_right],sequence[swap_index_left]
-
-            yield tuple(sequence)
-
+            tmp_left = new_sequence[swap_index_left]
+            tmp_right = new_sequence[swap_index_right] 
+            new_sequence[swap_index_right] = tmp_left
+            new_sequence[swap_index_left] = tmp_right
+            yield tuple(new_sequence)
+            
+    def cross_breed_generator(self):
+        while True:
+            [sequence1, sequence2] = random.choices(list(self.sequences_distances.keys()),
+                                                    weights = list(self.sequences_distances.values()),
+                                                    k = 2)
+            new_sequence = []
+            collected_nodes_set = set()
+            
+            sequence1 = list(sequence1)
+            sequence2 = list(sequence2)
+            
+            for [node1,node2] in zip(sequence1,sequence2):
+                node_to_add = random.choice([node1,node2])
+                if not (node_to_add in collected_nodes_set):
+                    new_sequence.append(node_to_add)
+                    collected_nodes_set.add(node_to_add)
+                else:
+                    if not(node1 in collected_nodes_set):
+                        new_sequence.append(node1)
+                        collected_nodes_set.add(node1)
+                    elif not(node2 in collected_nodes_set):
+                        new_sequence.append(node2)
+                        collected_nodes_set.add(node2)
+                    else:
+                        nodes_not_added = list(set(self.dirt_coords) - collected_nodes_set)
+                        node_to_add = random.choice(nodes_not_added)
+                        new_sequence.append(node_to_add)
+                        collected_nodes_set.add(node_to_add)
+            yield tuple(new_sequence)
+                
+                
 
 [bot_row, bot_col] = [int(coord) for coord in input().split()]
 [rows, cols] = [int(size) for size in input().split()]
 
-bot_solve = OptimizedBotClean(rows=rows, cols=cols, bot_row=bot_row, bot_col=bot_col, type = "pair")
+bot_solve = OptimizedBotClean(rows=rows, cols=cols, bot_row=bot_row, bot_col=bot_col, type = "cross-breed")
 bot_solve.make_a_turn()
