@@ -3,6 +3,7 @@ from collections import deque, namedtuple
 import random
 from abc import ABC, abstractmethod
 import re
+import math
 
 
 class Matrix_Bot_Dirt(ABC):
@@ -121,14 +122,14 @@ class Matrix_Bot_Dirt(ABC):
         return total_distance
 
     
-class OptimizedBotClean(Matrix_Bot_Dirt):
+class MLOptimizedBotClean(Matrix_Bot_Dirt):
     '''
     this class is collection of methods for optimizing sequence of coords for bot to pass
     '''
 
     
     
-    def __init__(self, epochs = 20, iterations=250, population = 100, type="swap", **kwargs):
+    def __init__(self, epochs = 20, iterations=250, population = 100, generator_type="swap", **kwargs):
         self.iterations = iterations
         self.sequences_distances = {}
         self.epochs = epochs
@@ -141,7 +142,7 @@ class OptimizedBotClean(Matrix_Bot_Dirt):
                       "pair":self.pair_generator,
                       "cross-breed": self.cross_breed_generator}
         
-        self.sequence_generator = generators[type]
+        self.sequence_generator = generators[generator_type]
 
     def define_optimal_sequence(self):
         initial_guess = tuple([dirt_coords for dirt_coords in self.dirt_coords])
@@ -240,12 +241,47 @@ class OptimizedBotClean(Matrix_Bot_Dirt):
                         node_to_add = random.choice(nodes_not_added)
                         new_sequence.append(node_to_add)
                         collected_nodes_set.add(node_to_add)
+            
             yield tuple(new_sequence)
                 
+class HardCodedBotClean(Matrix_Bot_Dirt):
+    
+    def __init__(self, optimizer_type = "closest", **kwargs):
+        super().__init__(**kwargs)
+        
+        self.hard_coded_solvers = {"closest":self.always_choose_closest_node}
+        self.optimizer = self.hard_coded_solvers[optimizer_type]
+        
+        
+    def define_optimal_sequence(self):
+        return self.optimizer()
+    
+    def always_choose_closest_node(self):
+        current_node = self.bot_coords
+        nodeset = set(self.dirt_coords)
+        sequence = []
+        
+        while nodeset:
+            closest_distance = math.inf
+            closest_node = None
+            
+            for node in nodeset:
+                new_distance = self.calc_distance(current_node,node)
+                if new_distance < closest_distance:
+                    closest_distance = new_distance
+                    closest_node = node
+                    
+            sequence.append(closest_node)
+            current_node = closest_node
+            nodeset.remove(closest_node)
+            
+        return tuple(sequence)
                 
+                
+if __name__ == '__main__':
+    [bot_row, bot_col] = [int(coord) for coord in input().split()]
+    [rows, cols] = [int(size) for size in input().split()]
 
-[bot_row, bot_col] = [int(coord) for coord in input().split()]
-[rows, cols] = [int(size) for size in input().split()]
-
-bot_solve = OptimizedBotClean(rows=rows, cols=cols, bot_row=bot_row, bot_col=bot_col, type = "cross-breed")
-bot_solve.make_a_turn()
+    bot_solve = HardCodedBotClean(rows=rows, cols=cols, bot_row=bot_row, bot_col=bot_col, optimizer_type = "closest")
+    #bot_solve = MLOptimizedBotClean(rows=rows, cols=cols, bot_row=bot_row, bot_col=bot_col, generator_type = "swap")
+    bot_solve.make_a_turn()
