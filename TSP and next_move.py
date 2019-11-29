@@ -4,6 +4,7 @@ import random
 from abc import ABC, abstractmethod
 import re
 import math
+import copy
 
 
 class Matrix_Bot_Dirt(ABC):
@@ -140,7 +141,8 @@ class MLOptimizedBotClean(Matrix_Bot_Dirt):
             
         generators = {"swap":self.swap_generator,
                       "pair":self.pair_generator,
-                      "cross-breed": self.cross_breed_generator}
+                      "cross-breed": self.cross_breed_generator,
+                      "preferrably closest": self.always_preferrably_closest_generator}
         
         self.sequence_generator = generators[generator_type]
 
@@ -243,13 +245,85 @@ class MLOptimizedBotClean(Matrix_Bot_Dirt):
                         collected_nodes_set.add(node_to_add)
             
             yield tuple(new_sequence)
+            
+    @property
+    def node_to_nodes_distance_dicts_dict(self):
+        """
+        bad style nested dictionary - need to change that mess later
+        """
+        try:
+            return self._node_to_nodes_dicts_dict
+        except AttributeError:
+            self._node_to_nodes_dicts_dict = {}
+            for node_1_coords in self.dirt_coords:
+                tmp_dict_for_node_1 = {}
+                for node_2_coords in self.dirt_coords:
+                    if node_2_coords != node_1_coords:
+                        tmp_dict_for_node_1[node_2_coords] = self.calc_distance(node_1_coords,node_2_coords)
+            self._node_to_nodes_dicts_dict[node_1_coords] = copy.deepcopy(tmp_dict_for_node_1)
+        return self._node_to_nodes_dicts_dict
+            
+    @property
+    def bot_to_nodes_distance_dict(self):
+        """
+        clearly bad style - nighttime coding at its' worst
+        """
+        try:
+            return self._bot_to_nodes_distance_dict
+        except AttributeError:
+            self._bot_to_nodes_distance_dict = {}
+            for node_coords in self.dirt_coords:
+                self._bot_to_nodes_distance_dict[node_coords] = self.calc_distance(self.bot_coords,node_coords)
+        return self._bot_to_nodes_distance_dict
+    
+    def always_preferrably_closest_generator(self):
+        """
+        we try here to make something resembling to always_choose_closest_node method
+        from HardCodedBotClean class
+        except that we add variation - our choice is weighted: probability of choosing next closest node is highest
+        while probability of choosing farthest node - is lowest
+        
+        BAD STYLE!!! NINJACODING 
+        So not only it does not work... it is just bad and therefore this part of
+        code is just a graveyard of preconceptions
+        """
+        raise NotImplementedError
+        while True:
+            sequence = []
+            already_added_nodes = set()
+            
+            [current_node] = random.choices(list(self.bot_to_nodes_distance_dict.keys()),
+                                       weights = list(self.bot_to_nodes_distance_dict.values()),
+                                       k = 1)
+            
+            tmp_node_to_nodes_distance_dicts_dict = copy.deepcopy(self.node_to_nodes_distance_dicts_dict) 
+            
+            
+            
+            while len(sequence) < len(self.dirt_coords):
+                already_added_nodes.add(current_node)
+                
+                for node in already_added_nodes:
+                    tmp_node_to_nodes_distance_dicts_dict[current_node].pop(node, None)
+
+                [next_node] = random.choices(list(tmp_node_to_nodes_distance_dicts_dict[current_node].keys()),
+                                       weights = list(tmp_node_to_nodes_distance_dicts_dict[current_node].values()),
+                                       k = 1)
+                #tmp_node_to_nodes_distance_dicts_dict.pop(current_node)
+                sequence.append(current_node)
+                current_node = next_node
+            
+            yield current_node
+                
+
                 
 class HardCodedBotClean(Matrix_Bot_Dirt):
     
     def __init__(self, optimizer_type = "closest", **kwargs):
         super().__init__(**kwargs)
         
-        self.hard_coded_solvers = {"closest":self.always_choose_closest_node}
+        self.hard_coded_solvers = {"closest":self.always_choose_closest_node,
+                                   "two closest":self.always_try_two_closest_nodes}
         self.optimizer = self.hard_coded_solvers[optimizer_type]
         
         
@@ -276,12 +350,104 @@ class HardCodedBotClean(Matrix_Bot_Dirt):
             nodeset.remove(closest_node)
             
         return tuple(sequence)
+    
+    def always_try_two_closest_nodes(self):
+        """
+        CURRENTLY IT IS NOT OPTIMAL DUE TO SOME MISTAKE
+        it wins only 3 out of 4 and its' paths are LONGER than expected (so there are clearly MISTAKES in code)
+        in contrast to all other methods all sequences will start with bot coords
+        so we don't need this first node in resulting sequence
+        """
+        current_node = self.bot_coords
+        nodeset = set(self.dirt_coords)
+        
+        Path_Seq_Nodeset = namedtuple("PathSeqNodeset",['distance','sequence','nodeset']) 
+        self.path_sequence_nodeset_triples = deque([ Path_Seq_Nodeset(0,[current_node],nodeset) ])
+    
+        current_shortest_path = math.inf
+        finished_sequences = []
+        
+        while self.path_sequence_nodeset_triples: 
+            '''
+            simply couldn't think of better loop
+            which doubles on each turn... mb there is one.
+            '''
+            sequence_nodeset_triple = self.path_sequence_nodeset_triples.pop()
+            #first we decide if current sequence can be continued. If not - we add it to finished sequences
+            if not sequence_nodeset_triple.nodeset:
+                finished_sequences.append((sequence_nodeset_triple))
+                if sequence_nodeset_triple.distance < current_shortest_path:
+                    current_shortest_path = sequence_nodeset_triple.distance
+            elif sequence_nodeset_triple.distance < current_shortest_path:
+                self.make_two_seqs_from_one(sequence_nodeset_triple)
+            else:
+                pass
+        #now we need to find best of finished sequences based on their length
+        finished_sequences.sort()
+        best_sequence = finished_sequences[0].sequence
+        return best_sequence[1:] #we exclude first node from sequence because in this method it's bot coords
+
+    def make_two_seqs_from_one(self,sequence_nodeset_triple):
+
                 
+        #now we collect available nodes, and sort them by their distance from current node
+        available_distance_node_pairs = []
+        current_node = sequence_nodeset_triple.sequence[-1]       
+        for node in sequence_nodeset_triple.nodeset:
+            assert(len(node)==2)
+            new_distance = self.calc_distance(current_node,node)
+            available_distance_node_pairs.append((new_distance,node,))
                 
+        #now we define first closest node
+        available_distance_node_pairs.sort()
+        first_dist_node_to_add = available_distance_node_pairs[0]
+        self.add_node_triple_to_seq(sequence_nodeset_triple,first_dist_node_to_add)
+        
+        for dist_node_pair in available_distance_node_pairs[1:]:
+            possible_second_dist_node = dist_node_pair
+            if self.check_if_second_is_not_excessive(current_node,
+                                                     first_dist_node_to_add[1],
+                                                     possible_second_dist_node[1]):
+                self.add_node_triple_to_seq(sequence_nodeset_triple,possible_second_dist_node)
+            else:
+                pass
+            
+    def add_node_triple_to_seq(self,current_nodeset_triple,dist_node_to_add):
+        
+        tmp_nodeset_triple = copy.deepcopy(current_nodeset_triple)
+        #we collect neccessary data to add to our deque
+        current_node = tmp_nodeset_triple.sequence[-1]
+        distance_to_node = dist_node_to_add[0]
+        node_to_add = dist_node_to_add[1]
+        assert(len(node_to_add) == 2)
+        tmp_nodeset_triple.nodeset.remove(dist_node_to_add[1])
+        tmp_nodeset_triple._replace(distance =   tmp_nodeset_triple.distance + distance_to_node)
+        new_sequence = tmp_nodeset_triple.sequence
+        new_sequence.append(node_to_add)
+        tmp_nodeset_triple._replace(sequence = new_sequence)
+        #and add it to our deque
+        self.path_sequence_nodeset_triples.append(tmp_nodeset_triple)
+        
+    def check_if_second_is_not_excessive(self,current_node,first_node_to_add,possible_second_node):
+        row_upper_limit = max(current_node[0],possible_second_node[0])
+        row_lower_limit = min(current_node[0],possible_second_node[0])
+        col_upper_limit = max(current_node[1],possible_second_node[1])
+        col_lower_limit = min(current_node[1],possible_second_node[1])
+        if (row_lower_limit<=first_node_to_add[0]<=row_upper_limit and
+            col_lower_limit<=first_node_to_add[1]<=col_upper_limit ):
+            return False
+        else:
+            return True
+        
 if __name__ == '__main__':
     [bot_row, bot_col] = [int(coord) for coord in input().split()]
     [rows, cols] = [int(size) for size in input().split()]
 
-    bot_solve = HardCodedBotClean(rows=rows, cols=cols, bot_row=bot_row, bot_col=bot_col, optimizer_type = "closest")
+    #bot_solve = HardCodedBotClean(rows=rows, cols=cols, bot_row=bot_row, bot_col=bot_col, optimizer_type = "closest")
     #bot_solve = MLOptimizedBotClean(rows=rows, cols=cols, bot_row=bot_row, bot_col=bot_col, generator_type = "swap")
+    #bot_solve = MLOptimizedBotClean(rows=rows, cols=cols, bot_row=bot_row, 
+    #                               bot_col=bot_col, generator_type = "preferrably closest")
+    bot_solve = HardCodedBotClean(rows=rows, cols=cols, bot_row=bot_row, 
+                                  bot_col=bot_col, optimizer_type = "two closest") 
+    
     bot_solve.make_a_turn()
