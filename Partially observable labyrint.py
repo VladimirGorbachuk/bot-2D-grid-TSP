@@ -51,8 +51,24 @@ class Get_Out_of_Lab():
                 return self.__matrix
     
     def update_matrix(self):
+        neigboring_cells_coords = 
         
+    def direction_change(self, direction_previous, direction_chosen):
+        """
+        we prepare some dicts to define new direction based on previous direction (key)
+        and direction of turn (correspondingly)
+        """
+        directions_switch = namedtuple <>?????????????????????
+        directions_switch.turnleft = {"UP":"LEFT","LEFT":"DOWN","DOWN":"RIGHT","RIGHT":"UP"}
+        directions_switch.turnright = {"UP":"RIGHT", "RIGHT":"DOWN","DOWN":"LEFT", "LEFT":"UP"}
+        directions_switch.turnback = {"UP":"DOWN", "DOWN":"UP", "RIGHT":"LEFT", "LEFT":"RIGHT"}
         
+    def mark_as_passed(self):
+        if self.matrix[self.bot_coords[0]][self.bot_coords[1]] == "-":
+            self.matrix[self.bot_coords[0]][self.bot_coords[1]] = "x"
+        else:
+            self.matrix[self.bot_coords[0]][self.bot_coords[1]] = "#"
+            
 if __name__ == "__main__":
     bot_runner = Get_Out_of_Lab(int(input()))
     bot_runner.move()
