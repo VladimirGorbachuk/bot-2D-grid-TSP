@@ -106,6 +106,7 @@ class Matrix_Bot_Dirt():
         except AttributeError:
             self.__unknown_coords = []
             for row_ind, row in enumerate(self.matrix):
+                assert(len(row) == 5)
                 for col_ind, cell in enumerate(row):
                     if cell == "o":
                         self.__unknown_coords.append((row_ind, col_ind,))
@@ -128,6 +129,7 @@ class Matrix_Bot_Dirt():
         return distance
 
     def make_a_turn(self):
+        '''
         if self.closest_dirt_coord and not self.closest_waypoint_coord:
             target_coords = self.closest_dirt_coord
         elif self.closest_waypoint_coord and not self.closest_dirt_coord:
@@ -137,7 +139,13 @@ class Matrix_Bot_Dirt():
             target_coords = self.closest_waypoint_coord
         else:
             target_coords = self.closest_dirt_coord
-
+        '''
+        assert(self.dirt_coords or self.unknown_coords) #HERE IS THE PROBLEM!
+        if self.closest_dirt_coord:
+            target_coords = self.closest_dirt_coord
+        else:
+            target_coords = self.closest_waypoint_coord
+            
         if self.bot_coords == target_coords:
             print("CLEAN")
 
