@@ -31,19 +31,27 @@ class Get_Out_of_Lab():
     def matrix(self):
         try:
             return self.__matrix
-        except AttributeError:
+        except AttributeError: #that means - we did not define self.__matrix yet
             self.__matrix = []
             try:
                 with open(self.tmp_map_filename, "r") as f:
-                    bot_direction_relative_to_starting_direction = f.readline() #"RIGHT" or "LEFT" or "UP" or "DOWN"
-                    previous_pos = [int(coord) for coord in f.readline().split()]
-                    for row in range(self.matrix_rows):
-                        
-                        self.__matrix.append()
-            except FileNotFoundError:
+                    self.bot_direction = f.readline() #"RIGHT" or "LEFT" or "UP" or "DOWN"
+                    self.bot_pos = [int(coord) for coord in f.readline().split()]
+                    for _row in range(self.matrix_rows):
+                        row_from_file = [char for char in f.readline().split()]
+                        self.__matrix.append(row_from_file)
+                self.__update_matrix()
+            except FileNotFoundError: #that means we did not create file yet - i.e. it's our first turn
                 self.__matrix = [["o" for _ in range(61)] for __ in range(61)]
+                current position = (30,30,)
+                for row_ind in [29,30,31]:
+                    row_from_input_gen = (char for char in input())
+                    for col_ind in [29,30,31]:
+                        self.__matrix[row_ind,col_ind] = next(row_from_input_gen)
+                return self.__matrix
     
-    def update_matrix(self,prev_pos=None,prev_move =None):
+    def update_matrix(self):
+        
         
 if __name__ == "__main__":
     bot_runner = Get_Out_of_Lab(int(input()))
