@@ -43,7 +43,7 @@ class Matrix_Bot_Dirt():
 
             with open(self.tmp_matrix_filename, "r") as f:
                 for row in range(self.matrix_rows):
-                    old_matrix_view.append([symbol for symbol in f.readline()])
+                    old_matrix_view.append([symbol for symbol in f.readline().split()])
             return old_matrix_view
         except FileNotFoundError:
             old_matrix_view = []  # I intentionally repeat  setting as empty list, for clarity
@@ -140,7 +140,7 @@ class Matrix_Bot_Dirt():
         else:
             target_coords = self.closest_dirt_coord
         '''
-        assert(self.dirt_coords or self.unknown_coords) #HERE IS THE PROBLEM!
+        assert(self.dirt_coords or self.unknown_coords)
         if self.closest_dirt_coord:
             target_coords = self.closest_dirt_coord
         else:
