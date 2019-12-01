@@ -51,17 +51,54 @@ class Get_Out_of_Lab():
                 return self.__matrix
     
     def update_matrix(self):
-        neigboring_cells_coords = 
+        raise NotImplementedError
+        b_c= self.bot_coords
+        coords_to_update = ()
         
-    def direction_change(self, direction_previous, direction_chosen):
+    def acquire_and_rotate_input_matrix(self):
+        """
+        
+        """
+        input_minimatrix = []
+        for _row in range(3):
+            row_to_add = [char for char in input()]
+            input_minimatrix.append(row_to_add)
+        if self.bot_direction == "UP":
+            return input_minimatrix
+        elif self.bot_direction == "RIGHT":
+            raise NotImplementedError
+        elif self.bot_direction == "LEFT":
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
+        
+    def direction_change(self, direction_chosen):
         """
         we prepare some dicts to define new direction based on previous direction (key)
         and direction of turn (correspondingly)
         """
-        directions_switch = namedtuple <>?????????????????????
-        directions_switch.turnleft = {"UP":"LEFT","LEFT":"DOWN","DOWN":"RIGHT","RIGHT":"UP"}
-        directions_switch.turnright = {"UP":"RIGHT", "RIGHT":"DOWN","DOWN":"LEFT", "LEFT":"UP"}
-        directions_switch.turnback = {"UP":"DOWN", "DOWN":"UP", "RIGHT":"LEFT", "LEFT":"RIGHT"}
+        
+        directions_switch_turnleft = {"UP":"LEFT","LEFT":"DOWN","DOWN":"RIGHT","RIGHT":"UP"}
+        directions_switch_turnright = {"UP":"RIGHT", "RIGHT":"DOWN","DOWN":"LEFT", "LEFT":"UP"}
+        directions_switch_turnback = {"UP":"DOWN", "DOWN":"UP", "RIGHT":"LEFT", "LEFT":"RIGHT"}
+        
+        if direction_chosen == "UP":
+            return self.bot_direction
+        elif direction_chosen == "DOWN":
+            return directions_switch_turnback[direction_chosen]
+        elif direction_chosen == "LEFT":
+            return directions_switch_turnleft[direction_chosen]
+        else:
+            return directions_switch_turnright[direction_chosen]
+    
+    def write_to_file(self):
+        with open(self.tmp_map_filename, "w+") as f:
+            f.writeline(self.new_bot_direction)
+            f.writeline(self.new_bot_coords)
+            for row in self.matrix:
+                f.writeline(" ".join(row))
+    
+            
         
     def mark_as_passed(self):
         if self.matrix[self.bot_coords[0]][self.bot_coords[1]] == "-":
